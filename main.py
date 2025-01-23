@@ -11,19 +11,11 @@ from pydantic import HttpUrl
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm_asyncio
 
-from model import SEModel, Settings
+from model import SEModel
 
 type Robots = dict[str, list[tuple[str, str]]]
 T = TypeVar("T")
 CDN = "storage.googleapis.com"
-env = Settings()
-
-
-def write(*args, **kwargs):
-    if env.ENV == "ci":
-        print(*args, **kwargs)
-    else:
-        tqdm_asyncio.write(*args, **kwargs)
 
 
 class WhiteScraper:
@@ -75,7 +67,7 @@ class WhiteScraper:
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=10, exp_base=2),
         retry=retry_if_exception_type(httpx.HTTPStatusError),
-        after=lambda x: write(str(x)),
+        after=lambda x: tqdm_asyncio.write((str(x))),
         reraise=True,
     )
     async def request(self, method: str, url: HttpUrl, **kwargs):
@@ -83,7 +75,7 @@ class WhiteScraper:
         try:
             return await self.request_raw(method, url, **kwargs)
         except httpx.RemoteProtocolError:
-            write("Reopening connection")
+            tqdm_asyncio.write("Reopening connection")
             await self.reopen()
             return await self.request_raw(method, url, **kwargs)
 
@@ -209,7 +201,7 @@ async def main():
                 res = await client.request("GET", topic.imageUrl)
                 async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
                     await f.write(res.content)
-                write(f"Downloaded {page}.png")
+                tqdm_asyncio.write(f"Downloaded {page}.png")
 
         await tqdm_asyncio.gather(*[process_pages(page) for page in topic_pages])
 

@@ -27,8 +27,6 @@ jobs:
           python-version: "3.13"
       - run: pip install -r requirements.txt
       - run: python main.py
-        env:
-          ENV: "ci"
 
       - name: Commit
         continue-on-error: true

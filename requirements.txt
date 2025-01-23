@@ -1,0 +1,6 @@
+httpx[http2]==0.*
+beautifulsoup4==4.*
+pydantic==2.*
+
+lxml
+tqdm

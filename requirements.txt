@@ -5,3 +5,4 @@ pydantic==2.*
 lxml
 tqdm
 tenacity
+aiofiles

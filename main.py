@@ -4,11 +4,12 @@ import json
 import os
 from typing import Optional, TypeVar
 
+import aiofiles
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import HttpUrl
 from tenacity import retry, stop_after_attempt, wait_exponential
-from tqdm import tqdm
+from tqdm.asyncio import tqdm_asyncio
 
 from model import SEModel
 
@@ -67,13 +68,17 @@ class WhiteScraper:
         await self.robots_check(url)
         return await self.request_raw(method, url, **kwargs)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, exp_base=2))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=10, exp_base=2))
     async def request_raw(self, method: str, url: HttpUrl, **kwargs):
         try:
             response = await self.client.request(method, str(url), **kwargs)
             response.raise_for_status()
             return response
+        except httpx.HTTPStatusError as e:
+            tqdm_asyncio.write(f"HTTP Status Error: {e}")
+            raise
         except httpx.RemoteProtocolError:
+            tqdm_asyncio.write("Reopening connection")
             await self.reopen()
             response = await self.client.request(method, str(url), **kwargs)
             response.raise_for_status()
@@ -180,9 +185,11 @@ async def main():
 
         for topic in topics:
             topic_pages.extend(await client.get_sitemap(topic))
-        for page in tqdm(topic_pages):
+
+        async def process_pages(page: HttpUrl, semaphore=asyncio.Semaphore(2)):
             assert page.path is not None
-            html = await client.request("GET", page)
+            async with semaphore:
+                html = await client.request("GET", page)
             soup = BeautifulSoup(html.text, "html.parser")
             next_data = soup.find_all("script", {"type": "application/json", "id": "__NEXT_DATA__"})
 
@@ -190,13 +197,15 @@ async def main():
             topic = data.props.pageProps.resTopic
             metadata[topic.name] = topic.model_dump()
             if topic.imageUrl.host == CDN:
-                with open(f"images/{topic.name}.png", "wb") as f:
+                async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
                     res = await client.request("GET", topic.imageUrl)
-                    f.write(res.content)
-                tqdm.write(f"Downloaded {page}.png")
+                    await f.write(res.content)
+                tqdm_asyncio.write(f"Downloaded {page}.png")
 
-        with open("metadata.json", "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        await tqdm_asyncio.gather(*[process_pages(page) for page in topic_pages])
+
+        async with aiofiles.open("metadata.json", "w", encoding="utf-8") as f:
+            await f.write(json.dumps(metadata, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -157,7 +157,7 @@ async def main():
 
         for topic in topics:
             topic_pages.extend(await client.get_sitemap(topic))
-        for page in tqdm(topic_pages[:5]):
+        for page in tqdm(topic_pages):
             assert page.path is not None
             html = await client.request("GET", page)
             soup = BeautifulSoup(html.text, "html.parser")

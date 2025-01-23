@@ -5,8 +5,7 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class ConfiguredBaseModel(BaseModel):
-    __pydantic_config__ = ConfigDict()
-    # __pydantic_config__ = ConfigDict(extra="ignore")
+    __pydantic_config__ = ConfigDict(extra="ignore")
 
 
 class User(ConfiguredBaseModel):

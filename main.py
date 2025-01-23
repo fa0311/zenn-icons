@@ -8,15 +8,22 @@ import aiofiles
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import HttpUrl
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm_asyncio
 
-from model import SEModel
+from model import SEModel, Settings
 
 type Robots = dict[str, list[tuple[str, str]]]
 T = TypeVar("T")
-
 CDN = "storage.googleapis.com"
+env = Settings()
+
+
+def write(*args, **kwargs):
+    if env.ENV == "ci":
+        print(*args, **kwargs)
+    else:
+        tqdm_asyncio.write(*args, **kwargs)
 
 
 class WhiteScraper:
@@ -64,30 +71,32 @@ class WhiteScraper:
     def robots_whitelist(self, host: str):
         self.robots_cache[host] = ({}, None)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=10, exp_base=2),
+        retry=retry_if_exception_type(httpx.HTTPStatusError),
+        after=lambda x: write(str(x)),
+        reraise=True,
+    )
     async def request(self, method: str, url: HttpUrl, **kwargs):
         await self.robots_check(url)
-        return await self.request_raw(method, url, **kwargs)
-
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=10, exp_base=2))
-    async def request_raw(self, method: str, url: HttpUrl, **kwargs):
         try:
-            response = await self.client.request(method, str(url), **kwargs)
-            response.raise_for_status()
-            return response
-        except httpx.HTTPStatusError as e:
-            tqdm_asyncio.write(f"HTTP Status Error: {e}")
-            raise
+            return await self.request_raw(method, url, **kwargs)
         except httpx.RemoteProtocolError:
-            tqdm_asyncio.write("Reopening connection")
+            write("Reopening connection")
             await self.reopen()
-            response = await self.client.request(method, str(url), **kwargs)
-            response.raise_for_status()
-            return response
+            return await self.request_raw(method, url, **kwargs)
+
+    async def request_raw(self, method: str, url: HttpUrl, **kwargs):
+        response = await self.client.request(method, str(url), **kwargs)
+        response.raise_for_status()
+        return response
 
     async def robots_check(self, url: HttpUrl):
         assert url.path is not None
         rules, _ = await self.__robots(url)
-        return self.__robots_txt_allowed(rules, url.path)
+        if not self.__robots_txt_allowed(rules, url.path):
+            raise ValueError("URL disallowed by robots.txt")
 
     async def sitemap(self, url: HttpUrl):
         assert url.host is not None
@@ -174,7 +183,7 @@ def find_one_or_none(data: list[T]) -> Optional[T]:
 
 
 async def main():
-    async with WhiteScraper("ZennCrawler/1.0.0") as client:
+    async with WhiteScraper("ZennCrawler/1.0.0+https://github.com/fa0311/zenn-icons") as client:
         client.robots_whitelist(CDN)
         sitemap = await client.sitemap(HttpUrl("https://zenn.dev"))
         urls = await client.get_sitemap(sitemap)
@@ -197,10 +206,10 @@ async def main():
             topic = data.props.pageProps.resTopic
             metadata[topic.name] = topic.model_dump()
             if topic.imageUrl.host == CDN:
+                res = await client.request("GET", topic.imageUrl)
                 async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
-                    res = await client.request("GET", topic.imageUrl)
                     await f.write(res.content)
-                tqdm_asyncio.write(f"Downloaded {page}.png")
+                write(f"Downloaded {page}.png")
 
         await tqdm_asyncio.gather(*[process_pages(page) for page in topic_pages])
 

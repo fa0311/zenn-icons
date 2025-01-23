@@ -27,6 +27,13 @@ class WhiteScraper:
         )
 
     async def __aenter__(self):
+        await self.open()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.close()
+
+    async def open(self):
         self.client = httpx.AsyncClient(
             http2=True,
             headers={
@@ -45,21 +52,32 @@ class WhiteScraper:
             },
             timeout=httpx.Timeout(10.0, read=30.0),
         )
-        return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def close(self):
         await self.client.aclose()
+
+    async def reopen(self):
+        await self.close()
+        await self.open()
 
     def robots_whitelist(self, host: str):
         self.robots_cache[host] = ({}, None)
 
     async def request(self, method: str, url: HttpUrl, **kwargs):
         await self.robots_check(url)
-        return await self.__request(method, url, **kwargs)
+        return await self.request_raw(method, url, **kwargs)
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, exp_base=2))
-    async def __request(self, method: str, url: HttpUrl, **kwargs):
-        return await self.client.request(method, str(url), **kwargs)
+    async def request_raw(self, method: str, url: HttpUrl, **kwargs):
+        try:
+            response = await self.client.request(method, str(url), **kwargs)
+            response.raise_for_status()
+            return response
+        except httpx.RemoteProtocolError:
+            await self.reopen()
+            response = await self.client.request(method, str(url), **kwargs)
+            response.raise_for_status()
+            return response
 
     async def robots_check(self, url: HttpUrl):
         assert url.path is not None
@@ -87,8 +105,7 @@ class WhiteScraper:
 
         if url.host not in self.robots_cache.keys():
             robots = f"{url.scheme}://{url.host}/robots.txt"
-            response = await self.client.get(robots)
-            response.raise_for_status()
+            response = await self.request_raw("GET", HttpUrl(robots))
             self.robots_cache[url.host] = self.__parse_robots_txt(response.text)
 
         return self.robots_cache[url.host]

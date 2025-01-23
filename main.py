@@ -170,8 +170,8 @@ async def main():
                 with open(f"images/{topic.name}.png", "wb") as f:
                     res = await client.request("GET", topic.imageUrl)
                     f.write(res.content)
-
                 tqdm.write(f"Downloaded {page}.png")
+
         with open("metadata.json", "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
 

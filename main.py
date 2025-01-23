@@ -7,6 +7,7 @@ from typing import Optional, TypeVar
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import HttpUrl
+from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
 from model import SEModel
@@ -42,6 +43,7 @@ class WhiteScraper:
                 "accept-encoding": "gzip",
                 "accept-language": "ja,en;q=0.9",
             },
+            timeout=httpx.Timeout(10.0, read=30.0),
         )
         return self
 
@@ -53,6 +55,10 @@ class WhiteScraper:
 
     async def request(self, method: str, url: HttpUrl, **kwargs):
         await self.robots_check(url)
+        return await self.__request(method, url, **kwargs)
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, exp_base=2))
+    async def __request(self, method: str, url: HttpUrl, **kwargs):
         return await self.client.request(method, str(url), **kwargs)
 
     async def robots_check(self, url: HttpUrl):

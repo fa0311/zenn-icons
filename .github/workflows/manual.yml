@@ -1,0 +1,19 @@
+name: manual
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  manual-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: tar -czf zenn-icons.gz -C images .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: zenn-icons.gz
+          tag_name: latest

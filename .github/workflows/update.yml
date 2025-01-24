@@ -16,7 +16,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  test:
+  crawl:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,16 @@ jobs:
           git add .
           git commit -m "Update"
           git push origin main
+
+  upload:
+    needs: crawl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: tar -czf zenn-icons.gz -C images .
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: zenn-icons.gz
+          tag_name: latest

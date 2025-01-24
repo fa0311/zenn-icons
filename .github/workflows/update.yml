@@ -38,13 +38,23 @@ jobs:
           git push origin main
 
   upload:
+    if: github.event_name != 'workflow_dispatch'
     needs: crawl
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - run: tar -czf zenn-icons.gz -C images .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: zenn-icons.gz
+          tag_name: latest
 
+  manual-upload:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: tar -czf zenn-icons.gz -C images .
       - uses: softprops/action-gh-release@v2
         with:
           files: zenn-icons.gz

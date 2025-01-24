@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: tar -czf zenn-icons.gz -C images .
+      - run: tar -czf zenn-icons.tar.gz -C images .
       - uses: softprops/action-gh-release@v2
         with:
           files: zenn-icons.gz

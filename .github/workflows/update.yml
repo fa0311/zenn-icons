@@ -9,6 +9,7 @@ on:
     paths:
       - "**/*.py"
       - "requirements.txt"
+      - ".github/workflows/update.yml"
   workflow_dispatch:
 
 permissions:

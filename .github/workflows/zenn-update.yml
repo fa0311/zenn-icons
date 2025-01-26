@@ -16,23 +16,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  crawl:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Commit
-        continue-on-error: true
-        run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "GitHub Action"
-          git add .
-          git commit -m "Update"
-          git push origin main
-
   upload:
-    needs: crawl
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

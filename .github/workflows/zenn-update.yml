@@ -7,9 +7,8 @@ on:
     branches:
       - main
     paths:
-      - "**/*.py"
-      - "requirements.txt"
-      - ".github/workflows/update.yml"
+      - "zenn/*"
+      - ".github/workflows/zenn-update.yml"
   workflow_dispatch:
 
 permissions:
@@ -43,8 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: tar -czf zenn-icons.tar.gz -C images .
+      - run: tar -czf zenn.tar.gz -C zenn .
       - uses: softprops/action-gh-release@v2
         with:
-          files: zenn-icons.gz
+          files: zenn.gz
           tag_name: latest

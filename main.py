@@ -11,7 +11,7 @@ import tqdm
 from bs4 import BeautifulSoup
 from PIL import Image
 from pydantic import HttpUrl
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm_asyncio
 
 from model import SEModel
@@ -198,7 +198,7 @@ async def main():
 
             data = SEModel.model_validate_json(find_one(find_one(next_data).contents))
             topic = data.props.pageProps.resTopic
-            metadata[topic.name] = topic.model_dump()
+            metadata[topic.name] = topic.model_dump(mode="json")
             if topic.imageUrl.host == CDN:
                 res = await client.request("GET", topic.imageUrl)
                 async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:

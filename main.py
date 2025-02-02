@@ -69,7 +69,6 @@ class WhiteScraper:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=10, exp_base=2),
-        retry=retry_if_exception_type(httpx.HTTPStatusError),
         after=lambda x: tqdm_asyncio.write((str(x))),
         reraise=True,
     )

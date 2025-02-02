@@ -210,9 +210,9 @@ async def main():
         async with aiofiles.open("metadata.json", "w", encoding="utf-8") as f:
             await f.write(json.dumps(metadata, ensure_ascii=False, indent=2))
 
-    os.makedirs("dist", exist_ok=True)
     for file in tqdm.tqdm([*glob.glob("images/*"), *glob.glob("zenn/*")]):
-        name, ext = os.path.splitext(os.path.basename(file))
+        name, ext = os.path.splitext(file)
+        os.makedirs(f"dist/{os.path.dirname(name)}", exist_ok=True)
         if ext == ".png":
             with Image.open(file) as img:
                 img.save(f"dist/{name}.webp", "WEBP", quality=80)

@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: git pull
       - run: tar -czf zenn.tar.gz -C zenn .
       - uses: softprops/action-gh-release@v2
         with:

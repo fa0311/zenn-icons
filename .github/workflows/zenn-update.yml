@@ -25,3 +25,8 @@ jobs:
         with:
           files: zenn.tar.gz
           tag_name: latest
+      - run: tar -czf dist.tar.gz -C dist .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist.tar.gz
+          tag_name: latest

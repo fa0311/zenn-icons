@@ -1,4 +1,5 @@
 import asyncio
+import glob
 import gzip
 import json
 import os
@@ -6,7 +7,9 @@ from typing import Optional, TypeVar
 
 import aiofiles
 import httpx
+import tqdm
 from bs4 import BeautifulSoup
+from PIL import Image
 from pydantic import HttpUrl
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm_asyncio
@@ -207,6 +210,17 @@ async def main():
 
         async with aiofiles.open("metadata.json", "w", encoding="utf-8") as f:
             await f.write(json.dumps(metadata, ensure_ascii=False, indent=2))
+
+    os.makedirs("dist", exist_ok=True)
+    for file in tqdm.tqdm([*glob.glob("images/*"), *glob.glob("zenn/*")]):
+        name, ext = os.path.splitext(os.path.basename(file))
+        if ext == ".png":
+            with Image.open(file) as img:
+                img.save(f"dist/{name}.webp", "WEBP", quality=80)
+        else:
+            async with aiofiles.open(file, "r") as f:
+                async with aiofiles.open(f"dist/{name}{ext}", "w") as g:
+                    await g.write(await f.read())
 
 
 if __name__ == "__main__":

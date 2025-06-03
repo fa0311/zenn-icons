@@ -3,7 +3,7 @@ import glob
 import gzip
 import json
 import os
-from typing import Optional, TypeVar
+from typing import Awaitable, Optional, TypeVar
 
 import aiofiles
 import httpx
@@ -19,6 +19,33 @@ from model import SEModel
 type Robots = dict[str, list[tuple[str, str]]]
 T = TypeVar("T")
 CDN = "storage.googleapis.com"
+
+
+class TqdmWrapper:
+    @staticmethod
+    def ci():
+        return os.environ.get("CI", "false").lower() == "true"
+
+    @staticmethod
+    def print(message: str):
+        if TqdmWrapper.ci():
+            print(message)
+        else:
+            tqdm_asyncio.write(message)
+
+    @staticmethod
+    async def run(fs: Awaitable[T], index: int, total: int):
+        res = await fs
+        tqdm_text = tqdm.tqdm.format_meter(index, total, 1, 80)
+        tqdm.tqdm.write(tqdm_text)
+        return res
+
+    @staticmethod
+    def gather(*fs: Awaitable[T]) -> Awaitable[list[T]]:
+        if TqdmWrapper.ci():
+            return asyncio.gather(*[TqdmWrapper.run(fs[i], i, len(fs)) for i in range(len(fs))])
+        else:
+            return tqdm_asyncio.gather(*fs)
 
 
 class WhiteScraper:
@@ -69,7 +96,7 @@ class WhiteScraper:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=10, exp_base=2),
-        after=lambda x: tqdm_asyncio.write((str(x))),
+        after=lambda x: TqdmWrapper.print((str(x))),
         reraise=True,
     )
     async def request(self, method: str, url: HttpUrl, **kwargs):
@@ -77,7 +104,7 @@ class WhiteScraper:
         try:
             return await self.request_raw(method, url, **kwargs)
         except httpx.RemoteProtocolError:
-            tqdm_asyncio.write("Reopening connection")
+            TqdmWrapper.print("Reopening connection")
             await self.reopen()
             return await self.request_raw(method, url, **kwargs)
 
@@ -189,6 +216,14 @@ async def main():
         for topic in topics:
             topic_pages.extend(await client.get_sitemap(topic))
 
+        async def request(url: HttpUrl, name: str):
+            try:
+                return await client.request("GET", url)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    TqdmWrapper.print(f"Not found: {name} {url}")
+                    return None
+
         async def process_pages(page: HttpUrl, semaphore=asyncio.Semaphore(2)):
             assert page.path is not None
             async with semaphore:
@@ -200,12 +235,13 @@ async def main():
             topic = data.props.pageProps.resTopic
             metadata[topic.name] = topic.model_dump(mode="json")
             if topic.imageUrl.host == CDN:
-                res = await client.request("GET", topic.imageUrl)
-                async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
-                    await f.write(res.content)
-                tqdm_asyncio.write(f"Downloaded {page}.png")
+                res = await request(topic.imageUrl, topic.name)
+                if res is not None:
+                    async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
+                        await f.write(res.content)
+                    TqdmWrapper.print(f"Downloaded {page}.png")
 
-        await tqdm_asyncio.gather(*[process_pages(page) for page in topic_pages])
+        await TqdmWrapper.gather(*[process_pages(page) for page in topic_pages])
 
         async with aiofiles.open("metadata.json", "w", encoding="utf-8") as f:
             await f.write(json.dumps(metadata, ensure_ascii=False, indent=2))

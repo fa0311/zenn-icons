@@ -1,8 +1,6 @@
 name: update
 
 on:
-  schedule:
-    - cron: "0 21 1 * *"
   push:
     branches:
       - main
@@ -16,7 +14,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  upload:
+  upload-files:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

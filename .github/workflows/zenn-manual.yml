@@ -1,4 +1,4 @@
-name: manual
+name: manual-upload-files
 
 on:
   workflow_dispatch:

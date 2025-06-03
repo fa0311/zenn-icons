@@ -1,4 +1,4 @@
-name: update
+name: update-zenn-icons
 
 on:
   schedule:
@@ -41,7 +41,7 @@ jobs:
           git push origin main
 
   upload-files:
-    needs: crawl
+    needs: crawl-zenn-icons
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

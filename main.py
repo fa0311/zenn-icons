@@ -77,7 +77,7 @@ async def main():
                         await f.write(res.content)
                     TqdmWrapper.print(f"Downloaded {page}.png")
 
-        await TqdmWrapper.gather(*[process_pages(page) for page in topic_pages[0:30]])
+        await TqdmWrapper.gather(*[process_pages(page) for page in topic_pages])
 
         async with aiofiles.open("metadata.json", "w", encoding="utf-8") as f:
             await f.write(json.dumps(metadata, ensure_ascii=False, indent=2))

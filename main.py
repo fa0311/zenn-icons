@@ -13,12 +13,11 @@ from lib.model import SEModel
 from lib.scraper import WhiteScraper
 from lib.tqdm import TqdmWrapper
 
-CDN = "storage.googleapis.com"
+# Hosts that serve topic icons. Neither publishes a robots.txt, so they are whitelisted explicitly.
+# Zenn moved uploads from storage.googleapis.com to static.zenn.studio in 2026-05.
+CDN_HOSTS = ("storage.googleapis.com", "static.zenn.studio")
+DEFAULT_ICON_HOST = "zenn.dev"
 TqdmWrapper.ci = os.environ.get("CI", "false").lower() == "true"
-
-
-def google_storage_filter(url: str) -> bool:
-    return url.startswith("https://storage.googleapis.com/zenn-user-upload/topics/") and url.endswith(".png")
 
 
 def find_one[T](data: list[T]) -> T:
@@ -39,7 +38,8 @@ def find_one_or_none[T](data: list[T]) -> T | None:
 
 async def main():
     async with WhiteScraper("ZennCrawler/1.0.0+https://github.com/fa0311/zenn-icons") as client:
-        client.robots_whitelist(CDN)
+        for host in CDN_HOSTS:
+            client.robots_whitelist(host)
         sitemap = await client.sitemap(HttpUrl("https://zenn.dev"))
         urls = await client.get_sitemap(sitemap)
         topics = [url for url in urls if "topic" in (url.path or "")]
@@ -70,12 +70,14 @@ async def main():
             data = SEModel.model_validate_json(str(find_one(find_one(next_data).contents)))
             topic = data.props.pageProps.resTopic
             metadata[topic.name] = topic.model_dump(mode="json")
-            if topic.imageUrl.host == CDN:
+            if topic.imageUrl.host in CDN_HOSTS:
                 res = await request(topic.imageUrl, topic.name)
                 if res is not None:
                     async with aiofiles.open(f"images/{topic.name}.png", "wb") as f:
                         await f.write(res.content)
                     TqdmWrapper.print(f"Downloaded {page}.png")
+            elif topic.imageUrl.host != DEFAULT_ICON_HOST:
+                TqdmWrapper.print(f"Unknown icon host, skipped: {topic.name} {topic.imageUrl}")
 
         await TqdmWrapper.gather(*[process_pages(page) for page in topic_pages])
 

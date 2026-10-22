@@ -20,8 +20,10 @@ class Publication(ConfiguredBaseModel):
     displayName: str
     avatarSmallUrl: HttpUrl
     avatarUrl: HttpUrl
-    pro: bool
     avatarRegistered: bool
+    # Zenn renamed `pro` to `plan` (2026-10); keep both optional so either schema validates.
+    pro: bool | None = None
+    plan: str | None = None
 
 
 class Article(ConfiguredBaseModel):
@@ -39,7 +41,10 @@ class Article(ConfiguredBaseModel):
     publishedAt: datetime
     bodyUpdatedAt: datetime
     sourceRepoUpdatedAt: datetime | None
-    pinned: bool
+    # Zenn split `pinned` into `pinnedByUser` / `pinnedByPublication` (2026-10).
+    pinned: bool | None = None
+    pinnedByUser: bool | None = None
+    pinnedByPublication: bool | None = None
     path: str
     user: User
     publication: Publication | None

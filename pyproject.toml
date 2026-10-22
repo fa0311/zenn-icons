@@ -1,5 +1,32 @@
+[project]
+name = "zenn-icons"
+version = "0.1.0"
+description = "Crawl Zenn topic icons and publish them via jsDelivr"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "beautifulsoup4>=4.15.0",
+    "httpx[http2]>=0.28.1",
+    "lxml>=6.1.3",
+    "pillow>=13.0.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.1",
+    "tenacity>=9.2.1",
+    "tqdm>=4.70.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "pyright>=1.1",
+]
+
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pyright]
 typeCheckingMode = "standard"

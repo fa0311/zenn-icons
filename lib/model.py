@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
 
@@ -21,8 +20,8 @@ class Publication(ConfiguredBaseModel):
     displayName: str
     avatarSmallUrl: HttpUrl
     avatarUrl: HttpUrl
-    pro: bool
     avatarRegistered: bool
+    plan: str
 
 
 class Article(ConfiguredBaseModel):
@@ -39,11 +38,12 @@ class Article(ConfiguredBaseModel):
     isSuspendingPrivate: bool
     publishedAt: datetime
     bodyUpdatedAt: datetime
-    sourceRepoUpdatedAt: Optional[datetime]
-    pinned: bool
+    sourceRepoUpdatedAt: datetime | None
+    pinnedByUser: bool
+    pinnedByPublication: bool
     path: str
     user: User
-    publication: Optional[Publication]
+    publication: Publication | None
 
 
 class ResTopic(ConfiguredBaseModel):
@@ -62,8 +62,8 @@ class PageProps(ConfiguredBaseModel):
     isContest: bool
     currentPage: int
     activeItemType: str
-    articles: List[Article]
-    nextPage: Optional[int] = None
+    articles: list[Article]
+    nextPage: int | None = None
 
 
 class Props(ConfiguredBaseModel):
@@ -82,6 +82,6 @@ class SEModel(ConfiguredBaseModel):
     assetPrefix: HttpUrl
     isFallback: bool
     isExperimentalCompile: bool
-    dynamicIds: List[int]
+    dynamicIds: list[int]
     gip: bool
-    scriptLoader: List
+    scriptLoader: list

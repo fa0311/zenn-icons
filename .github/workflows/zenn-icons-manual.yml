@@ -11,14 +11,14 @@ jobs:
   manual-upload-files:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: tar -czf zenn-icons.tar.gz -C images .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: zenn-icons.tar.gz
           tag_name: latest
       - run: tar -czf dist.tar.gz -C dist .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist.tar.gz
           tag_name: latest

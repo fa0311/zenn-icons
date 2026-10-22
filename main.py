@@ -25,15 +25,6 @@ def find_one[T](data: list[T]) -> T:
         raise ValueError("Multiple elements found")
 
 
-def find_one_or_none[T](data: list[T]) -> T | None:
-    if len(data) == 1:
-        return data[0]
-    elif len(data) == 0:
-        return None
-    else:
-        raise ValueError("Multiple elements found")
-
-
 async def main():
     async with WhiteScraper("ZennCrawler/1.0.0+https://github.com/fa0311/zenn-icons") as client:
         for host in CDN_HOSTS:

@@ -21,8 +21,7 @@ class Publication(ConfiguredBaseModel):
     avatarSmallUrl: HttpUrl
     avatarUrl: HttpUrl
     avatarRegistered: bool
-    pro: bool | None = None
-    plan: str | None = None
+    plan: str
 
 
 class Article(ConfiguredBaseModel):
@@ -40,9 +39,8 @@ class Article(ConfiguredBaseModel):
     publishedAt: datetime
     bodyUpdatedAt: datetime
     sourceRepoUpdatedAt: datetime | None
-    pinned: bool | None = None
-    pinnedByUser: bool | None = None
-    pinnedByPublication: bool | None = None
+    pinnedByUser: bool
+    pinnedByPublication: bool
     path: str
     user: User
     publication: Publication | None

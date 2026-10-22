@@ -144,5 +144,4 @@ class WhiteScraper:
 
     def __parse_sitemap(self, sitemap_xml: str) -> list[HttpUrl]:
         soup = BeautifulSoup(sitemap_xml, "xml")
-        locs = [entry.find("loc") for entry in [*soup.find_all("sitemap"), *soup.find_all("url")]]
-        return [HttpUrl(loc.text) for loc in locs if loc is not None]
+        return [HttpUrl(loc.text) for loc in soup.select("sitemap > loc, url > loc")]

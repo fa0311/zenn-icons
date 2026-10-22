@@ -1,5 +1,5 @@
 import gzip
-from typing import Optional
+from typing import ClassVar
 
 import httpx
 from bs4 import BeautifulSoup
@@ -12,7 +12,7 @@ type Robots = dict[str, list[tuple[str, str]]]
 
 
 class WhiteScraper:
-    robots_cache: dict[str, tuple[Robots, Optional[str]]] = {}
+    robots_cache: ClassVar[dict[str, tuple[Robots, str | None]]] = {}
 
     def __init__(self, user_agent: str):
         self.user_agent = (
@@ -35,7 +35,10 @@ class WhiteScraper:
                 "sec-ch-ua-mobile": "?0",
                 "sec-ch-ua-platform": '"Linux"',
                 "upgrade-insecure-requests": "1",
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                    "image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                ),
                 "sec-fetch-site": "none",
                 "sec-fetch-mode": "navigate",
                 "sec-fetch-user": "?1",
@@ -59,7 +62,7 @@ class WhiteScraper:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=10, exp_base=2),
-        after=lambda x: TqdmWrapper.print((str(x))),
+        after=lambda x: TqdmWrapper.print(str(x)),
         reraise=True,
     )
     async def request(self, method: str, url: HttpUrl, **kwargs):
@@ -101,14 +104,14 @@ class WhiteScraper:
     async def __robots(self, url: HttpUrl):
         assert url.host is not None
 
-        if url.host not in self.robots_cache.keys():
+        if url.host not in self.robots_cache:
             robots = f"{url.scheme}://{url.host}/robots.txt"
             response = await self.request_raw("GET", HttpUrl(robots))
             self.robots_cache[url.host] = self.__parse_robots_txt(response.text)
 
         return self.robots_cache[url.host]
 
-    def __parse_robots_txt(self, robots_txt: str) -> tuple[Robots, Optional[str]]:
+    def __parse_robots_txt(self, robots_txt: str) -> tuple[Robots, str | None]:
         rules: Robots = {}
 
         current_user_agent = None
@@ -141,6 +144,5 @@ class WhiteScraper:
 
     def __parse_sitemap(self, sitemap_xml: str) -> list[HttpUrl]:
         soup = BeautifulSoup(sitemap_xml, "xml")
-        urls1 = [loc.find("loc").text for loc in soup.find_all("sitemap")]
-        urls2 = [loc.find("loc").text for loc in soup.find_all("url")]
-        return [HttpUrl(url) for url in urls1 + urls2]
+        locs = [entry.find("loc") for entry in [*soup.find_all("sitemap"), *soup.find_all("url")]]
+        return [HttpUrl(loc.text) for loc in locs if loc is not None]

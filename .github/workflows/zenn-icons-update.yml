@@ -8,7 +8,8 @@ on:
       - main
     paths:
       - "**/*.py"
-      - "requirements.txt"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/zenn-icons-update.yml"
   workflow_dispatch:
 
@@ -21,13 +22,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v2
+      - uses: astral-sh/setup-uv@v10
         with:
-          python-version: "3.13"
-      - run: pip install -r requirements.txt
-      - run: python main.py
+          python-version-file: ".python-version"
+      - run: uv sync --locked
+      - run: uv run main.py
         env:
           CI: "true"
 
@@ -44,15 +45,15 @@ jobs:
     needs: crawl-zenn-icons
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: git pull
       - run: tar -czf zenn-icons.tar.gz -C images .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: zenn-icons.tar.gz
           tag_name: latest
       - run: tar -czf dist.tar.gz -C dist .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist.tar.gz
           tag_name: latest

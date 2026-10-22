@@ -1,6 +1,7 @@
 import asyncio
 import time
-from typing import Awaitable, Iterable, TypeVar
+from collections.abc import Awaitable, Iterable
+from typing import TypeVar
 
 import tqdm
 from tqdm.asyncio import tqdm_asyncio
@@ -55,7 +56,7 @@ class TqdmEventAsync(TqdmEventBase):
             await asyncio.sleep(1)
 
     def __enter__(self):
-        asyncio.create_task(self.loop())
+        self.task = asyncio.create_task(self.loop())
         return super().__enter__()
 
 

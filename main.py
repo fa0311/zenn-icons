@@ -13,8 +13,6 @@ from lib.model import SEModel
 from lib.scraper import WhiteScraper
 from lib.tqdm import TqdmWrapper
 
-# Hosts that serve topic icons. Neither publishes a robots.txt, so they are whitelisted explicitly.
-# Zenn moved uploads from storage.googleapis.com to static.zenn.studio in 2026-05.
 CDN_HOSTS = ("storage.googleapis.com", "static.zenn.studio")
 DEFAULT_ICON_HOST = "zenn.dev"
 TqdmWrapper.ci = os.environ.get("CI", "false").lower() == "true"
